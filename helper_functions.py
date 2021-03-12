@@ -19,6 +19,9 @@ def preprocess_weather(df, moving_avg_duration_list):
         for duration in moving_avg_duration_list:
             df_[f'{feature}_{duration}'] = df_[feature].rolling(duration).mean()
 
+    # TODO: add seasonality feature - ordinal?
+
+    df_.sort_index(inplace=True)
     return df_
 
 
@@ -80,5 +83,19 @@ def clean_mosquito_df(df, gender=None):
     if gender:
         mosquito_df_ = mosquito_df_.loc[mosquito_df_['Gender'] == gender]
     mosquito_df_ = mosquito_df_.groupby(by=['Trap Date']).sum()
-
+    mosquito_df_.sort_index(inplace=True)
     return mosquito_df_
+
+
+def merge_mosquito_weather_data(m_df, w_df):
+    merged_df = pd.merge_asof(m_df,
+                              w_df,
+                              left_index=True,
+                              right_index=True,
+                              direction='nearest',
+                              tolerance=pd.Timedelta(value=1, unit='days'))
+
+    # remove all rows where the weather data is missing:
+    merged_df = merged_df.loc[~merged_df['pressure_station'].isnull()]
+
+    return merged_df
